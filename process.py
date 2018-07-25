@@ -208,6 +208,22 @@ def findMinCoord(coord):
 
 	return res
 
+def checkCoord(coord1, coord2):
+	coord = np.zeros(len(coord1))
+	for i in range(4):
+		dis = getDistance((coord1[i*2], coord1[i*2+1]), (coord2[i*2], coord2[i*2+1]))
+		print(dis)
+		if dis<15 and np.abs(coord1[i*2]-coord2[i*2])<15 and np.abs(coord1[i*2+1]-coord2[i*2+1])<15:
+			coord_x = (coord1[i*2]+coord2[i*2])//2
+			coord_y = (coord1[i*2+1]+coord2[i*2+1])//2
+			coord[i*2] = coord_x 
+			coord[i*2+1] = coord_y
+		else:
+			coord[i*2] = coord1[i*2]
+			coord[i*2+1] = coord1[i*2+1]
+
+	return coord
+
 def hough(image):
 	gary = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
 	edges = cv2.Canny(gary,50,200)
@@ -227,13 +243,21 @@ if __name__ == '__main__':
 
 	contours, idx = findCorner(img)
 	coord1, coord2 = findCoord(contours, idx)
+	coord = checkCoord(coord1, coord2)
+
 	print("coord1:", coord1)
 	print("coord2:",coord2)
 	for i in range(4):
 		cv2.circle(ROI_src, (coord1[i*2], coord1[i*2+1]), 4, (0,255,0),-1)
 		cv2.circle(ROI_src, (coord2[i*2], coord2[i*2+1]), 4, (0,0,255),-1)
+		cv2.circle(img, (coord1[i*2], coord1[i*2+1]), 4, (0,255,0),-1)
+		cv2.circle(img, (coord2[i*2], coord2[i*2+1]), 4, (0,0,255),-1)
+		cv2.circle(ROI_src, (int(coord[i*2]), int(coord[i*2+1])), 6, (255, 0, 0), -1)
+
 	cv2.imshow("coord", ROI_src)
 	cv2.imwrite("C:\\Users\\ER\Desktop\\test_code\\1_2400_coord.jpg", ROI_src)
+	cv2.imshow("coord_yuan", img)
+	cv2.imwrite("C:\\Users\\ER\Desktop\\test_code\\1_2400_coord1.jpg", img)
 	#hough(img)
 	cv2.waitKey(0)
 
