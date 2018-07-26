@@ -17,8 +17,7 @@ def myblur(image):
 
 	return img_open
 
-def findcontours(image):
-	img_open = myblur(image)
+def findcontours(img_open):	
 	img_contours, contours, hierarchy = cv2.findContours(img_open, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
 	#print("len contours1", len(contours[0]))
 	img_draw = img_open
@@ -35,131 +34,61 @@ def findcontours(image):
 			if max_area != 0:
 				c_min = []
 				c_min.append(max_cnt)
+				#print("c_min:", c_min)
 				cv2.drawContours(img_draw, c_min, -1, (0, 0 ,0), cv2.FILLED)
 			max_area = area
 			max_cnt = cnt
 		else:
 			c_min = []
 			c_min.append(cnt)
+			#print("c_min:", c_min)
 			cv2.drawContours(img_draw, c_min, -1, (0, 0 ,0), cv2.FILLED)	
 	c_max.append(max_cnt)
 	cv2.drawContours(img_draw, c_max, -1, (255, 255, 255), thickness=-1)
-	#cv2.imshow("contours", img_draw)
+	cv2.imshow("contours", img_draw)
 
 	#再次寻找轮廓
 	img_contours, contours, hierarchy = cv2.findContours(img_draw, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
 	#print("len contours", len(contours[0]))
 	return contours
 
-def affine(image):
-	#print("affine file", file)
-	#img_src = cv2.imread(file)
-	img_src = image
-	contours = findcontours(image)
+def getDistance(p1, p2):
+	return np.sqrt((p1[0]-p2[0])**2 + (p1[1]-p2[1])**2)
 
-	#print(len(contours[0]))
-	for c in contours:
-		rect = cv2.minAreaRect(c)
-		box = cv2.boxPoints(rect)
-		box = np.int0(box)
-		
-		ROI = img_src.copy()
-		M_rotate = cv2.getRotationMatrix2D((rect[0][0], rect[0][1]), rect[2], 1)
-		ROI = cv2.warpAffine(ROI, M_rotate, (ROI.shape[1], ROI.shape[0]))
-		cv2.imshow("ROI_warpAffine", ROI)
-		ROI_src = ROI.copy()
-		ROI_src1 = ROI.copy()
-		#cv2.circle(img_src, (contours[0][0][0][0], contours[0][0][0][1]), 4, (255, 255, 0), 2)
-		#for i in range(1, len(contours[0])):
-		#	cv2.circle(img_src, (contours[0][i][0][0], contours[0][i][0][1]), 2, (0, int(0+i/2.0), 255), -1)
-		#cv2.imshow("pointSRC", img_src)
-
-		contours_new = findcontours(ROI)
-		for c_new in contours_new:
-			rect_new = cv2.minAreaRect(c_new)
-			box_new = cv2.boxPoints(rect_new)
-			box_new = np.int0(box_new)
-
-			xs = np.min(box_new, axis=0)[0]
-			xe = np.max(box_new, axis=0)[0]
-			ys = np.min(box_new, axis=0)[1]
-			ye = np.max(box_new, axis=0)[1]
-			print("box_new:",box_new)
-			print("xs,ys,xe,ye:",xs,ys,xe,ye)
-			target = ROI[ys:ye, xs:xe]
-			target = target.copy()
-			cv2.imshow("target", target)
-			#cv2.imwrite("E:\\video_shot\\videos\\pics\\7_4200_target.jpg", target)
-
-			#left_bottom_x, left_bottom_y, right_bottom_x, right_bottom_y = findCoord(contours_new)
-			#print(left_bottom_x, left_bottom_y, right_bottom_x, right_bottom_y)
-
-			#pentagram = contours_new[0] 
-			#leftmost = tuple(pentagram[:,0][pentagram[:,:,0].argmin()])  
-			#rightmost = tuple(pentagram[:,0][pentagram[:,:,0].argmax()]) 
-			#upmost = tuple(pentagram[:,0][pentagram[:,:,1].argmin()])  
-			#downmost = tuple(pentagram[:,0][pentagram[:,:,1].argmax()])   
-			#print(leftmost, rightmost, upmost, downmost)
-			#cv2.circle(ROI, leftmost, 5, (0, 255, 0), -1)
-			#cv2.circle(ROI, rightmost, 5, (0, 255, 0), -1)
-			#cv2.circle(ROI, upmost, 5, (0, 255, 0), -1)
-			#cv2.circle(ROI, downmost, 5, (0, 255, 0), -1)
-			#print(contours_new)
-			#print(contours_new[0][1][0][0])
-			
-			cv2.circle(ROI, (contours_new[0][0][0][0], contours_new[0][0][0][1]), 4, (255, 255, 0), 2)
-			for i in range(1, len(contours_new[0])):
-				cv2.circle(ROI, (contours_new[0][i][0][0], contours_new[0][i][0][1]), 2, (0, int(0+i/2.0), 255), -1)
-				#cv2.circle(ROI, (left_bottom_x, left_bottom_y), 5, (0, 255, 0), -1)
-			cv2.imshow("pointROI", ROI)
-
-	#for i in range(len(contours_new[0])):
-	#	contours_new[0][i][0][0] = contours_new[0][i][0][0] - xs
-	#for i in range(len(contours_new[0])):
-	#	contours_new[0][i][0][1] = contours_new[0][i][0][1] - ys
-
-	return contours_new, ROI_src
-
-def findCorner(image):
-	#contours, image = affine(image)
-	contours = findcontours(image)
-	#cv2.imshow("conor_src", image)
+def findCorner(contours):
 	res_idx = []
 	icount = len(contours[0])
+	#print(icount)
 	fmax = -1
 	imax = -1
 	bsatar = False
 	for c in contours:
+		#print(len(c))
 		for i in range(len(contours[0])):
 			pa = contours[0][(i+icount-7)%icount][0]
 			pb = contours[0][(i+icount+7)%icount][0]
 			pc = contours[0][i][0]
-			#print("pa, pb, pc:",pa, pb, pc)
 
 			fa = getDistance(pa, pb)
 			fb = getDistance(pa, pc) + getDistance(pb, pc)
 			fang = np.float32(fa/fb)
 			fsharp = 1 - fang
 
-			if fsharp>0.05:
+			if fsharp>0.1:
 				bsatar = True
 				if fsharp > fmax:
 					fmax = fsharp
 					imax = i
+					res_idx.append(imax)
 			else:
 				if bsatar:
-					res_idx.append(imax)
-					#cv2.circle(image, (contours[0][imax][0][0], contours[0][imax][0][1]), 4, (0, 255, 0), -1)
+					#res_idx.append(imax)
 					imax = -1
 					fmax = -1
 					bsatar = False
-	#cv2.imshow("corner", image)
 
 	return contours, res_idx
 
-
-def getDistance(p1, p2):
-	return np.sqrt((p1[0]-p2[0])**2 + (p1[1]-p2[1])**2)
 
 def findCoord(contours, idx):
 	coord = []
@@ -221,21 +150,10 @@ def checkCoord(coord1, coord2):
 			coord.append(int(coord_x))
 			coord.append(int(coord_y))
 		else:
-
 			coord.append(coord1[i*2])
 			coord.append(coord1[i*2+1])
 
 	return coord
-
-def hough(image):
-	gary = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-	edges = cv2.Canny(gary,50,200)
-	cv2.imshow("gray", gary)
-	lines = cv2.HoughLinesP(edges,1,np.pi/180,30,minLineLength=100,maxLineGap=10)
-	lines1 = lines[:,0,:]#提取为为二维
-	for x1,y1,x2,y2 in lines1[:]: 
-		cv2.line(image,(x1,y1),(x2,y2),(255,0,0),2)
-	cv2.imshow("line:", image)
 
 def perspective(contours, image):
 
@@ -257,49 +175,69 @@ def perspective(contours, image):
 	return warp
 
 if __name__ == '__main__':
-
-	file0 = "E:\\video_shot\\videos\\pics\\1_3000.jpg"
-	file1 = "E:\\video_shot\\videos\\pics\\1_2400.jpg"
-	file2 = "E:\\video_shot\\videos\\pics\\2_600.jpg"
-	file3 = "E:\\video_shot\\videos\\pics\\3_600.jpg"
-	file4 = "E:\\video_shot\\videos\\pics\\4_600.jpg"
-	file5 = "E:\\video_shot\\videos\\pics\\4_1200.jpg"
-	file6 = "E:\\video_shot\\videos\\pics\\5_600.jpg"
-	file7 = "E:\\video_shot\\videos\\pics\\6_600.jpg"
-	file8 = "E:\\video_shot\\videos\\pics\\6_1200.jpg"
-	file9 = "E:\\video_shot\\videos\\pics\\6_1800.jpg"
-	file10 = "E:\\video_shot\\videos\\pics\\6_2400.jpg"
-	file11 = "E:\\video_shot\\videos\\pics\\7_3600.jpg"
-	file12 = "E:\\video_shot\\videos\\pics\\7_4200.jpg"
-
-	img = cv2.imread(file0)
-
-	#contours = affine(img)
-	ROI_src = img.copy()
-	contours, idx = findCorner(img)
-	coord1, coord2 = findCoord(contours, idx)
-	coord = checkCoord(coord1, coord2)
-
-	warp = perspective(contours, ROI_src)
-	cv2.imshow("warp",warp)
-	cv2.imwrite("E:\\video_shot\\videos\\pics\\warp.jpg", warp)
+	'''
+	path = "E:\\video_shot\\videos\\targetPics"
+	f = open("E:\\video_shot\\videos\\targetPics.txt", "w")
+	for path, d, fileList in os.walk(path):
+		for file in fileList:
+			if file.endswith(".jpg"):
+				f.write(os.path.join(path, file))
+				f.write("\n")
+	f.close()
+	'''
+	savePics = False
 	
-	ROI_src = warp.copy()
-	contours, idx = findCorner(warp)
-	coord1, coord2 = findCoord(contours, idx)
-	coord = checkCoord(coord1, coord2)
-	print(coord)
-	for i in range(0, len(contours[0])):
-		cv2.circle(warp, (contours[0][i][0][0], contours[0][i][0][1]), 2, (0, 0, 255), -1)
-	for i in idx:
-		cv2.circle(warp, (contours[0][i][0][0], contours[0][i][0][1]), 4, (0, 255, 0), -1)
-	cv2.imshow("pointSRC", warp)
+	f = open("E:\\video_shot\\videos\\list.txt", "r")
+	fileList = f.readlines()
 
-	for i in range(4):
-		cv2.circle(ROI_src, (coord1[i*2], coord1[i*2+1]), 4, (0,255,0),-1)
-		cv2.circle(ROI_src, (coord2[i*2], coord2[i*2+1]), 4, (0,0,255),-1)
-		cv2.circle(ROI_src, (int(coord[i*2]), int(coord[i*2+1])), 6, (0, 255, 0), -1)
-	cv2.imshow("coordwarp", ROI_src)
-	cv2.imwrite("E:\\video_shot\\videos\\pics\\coord_warp.jpg", ROI_src)
+	dir = "E:\\video_shot\\videos\\targetPics\\"
 
-	cv2.waitKey(0)
+	for file in fileList:
+		file = file.strip().split(" ")
+		img = cv2.imread(file[0])
+		print("image:", file[0])
+
+		img_blur = myblur(img) #图像形态学变换
+		contours = findcontours(img_blur) #寻找轮廓		
+		contours, idx = findCorner(contours) #找到支撑角和轮廓点
+
+		coord1, coord2 = findCoord(contours, idx) #转换轮廓坐标和支撑角坐标
+		coord = checkCoord(coord1, coord2) #从支撑角和轮廓点选出合适的顶角点
+		print("coord", coord)
+		warp = perspective(contours, img)#透视变换
+
+		#print(idx)
+		for i in idx:
+			cv2.circle(img, (contours[0][i][0][0], contours[0][i][0][1]), 10, (0, 0, 255), 1)
+		for i in range(4):
+			cv2.circle(img, (int(coord[i*2]), int(coord[i*2+1])), 6, (0, 255, 0), -1)
+		cv2.drawContours(img, contours,  -1, (0, 255, 255), thickness=1)
+		cv2.imshow("warp", img)
+
+		warp_blur = myblur(warp)
+		contours = findcontours(warp_blur)
+		#透视变换后再找到合适的顶角点
+		contours, idx = findCorner(contours)
+		coord1, coord2 = findCoord(contours, idx)
+		coord = checkCoord(coord1, coord2)
+	
+		rect = warp[coord[1]:coord[3]+1, coord[0]:coord[2]+1, :]
+		rect = cv2.resize(rect,(850,850))
+		cv2.imshow("rect",rect)
+		#cv2.imwrite("E:\\video_shot\\videos\\pics\\coord_warp_rect.jpg", rect)
+
+		#for i in range(4):
+		#	cv2.circle(warp, (int(coord[i*2]), int(coord[i*2+1])), 6, (0, 255, 0), -1)
+		#cv2.imshow("coordwarp", warp)
+
+		if savePics:
+			filePath, fileName = os.path.split(file[0])
+			fileName0, fileNmaeExt = os.path.splitext(fileName)
+			savePath = os.path.join(dir, fileName)
+			cv2.imwrite(savePath, rect)
+
+		#cv2.imwrite("E:\\video_shot\\videos\\pics\\coord_warp.jpg", warp)
+		if cv2.waitKey(0) & 0xFF == ord('q'):
+			break
+	
+	f.close()
