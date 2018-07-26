@@ -121,7 +121,8 @@ def affine(image):
 	return contours_new, ROI_src
 
 def findCorner(image):
-	contours, image = affine(image)
+	#contours, image = affine(image)
+	contours = findcontours(image)
 	#cv2.imshow("conor_src", image)
 	res_idx = []
 	icount = len(contours[0])
@@ -148,11 +149,11 @@ def findCorner(image):
 			else:
 				if bsatar:
 					res_idx.append(imax)
-					cv2.circle(image, (contours[0][imax][0][0], contours[0][imax][0][1]), 4, (0, 0, 255), 1)
+					#cv2.circle(image, (contours[0][imax][0][0], contours[0][imax][0][1]), 4, (0, 255, 0), -1)
 					imax = -1
 					fmax = -1
 					bsatar = False
-	cv2.imshow("corner", image)
+	#cv2.imshow("corner", image)
 
 	return contours, res_idx
 
@@ -181,7 +182,7 @@ def findCoord(contours, idx):
 
 	coord_contours = findMinCoord(contours_temp)
 
-	return coord_corner, coord_contours
+	return  coord_contours, coord_corner
 
 def findMinCoord(coord):
 	coord_temp0 = np.zeros(len(coord))
@@ -209,18 +210,20 @@ def findMinCoord(coord):
 	return res
 
 def checkCoord(coord1, coord2):
-	coord = np.zeros(len(coord1))
+	threshold = 5
+	coord = []
 	for i in range(4):
 		dis = getDistance((coord1[i*2], coord1[i*2+1]), (coord2[i*2], coord2[i*2+1]))
-		print(dis)
-		if dis<15 and np.abs(coord1[i*2]-coord2[i*2])<15 and np.abs(coord1[i*2+1]-coord2[i*2+1])<15:
-			coord_x = (coord1[i*2]+coord2[i*2])//2
-			coord_y = (coord1[i*2+1]+coord2[i*2+1])//2
-			coord[i*2] = coord_x 
-			coord[i*2+1] = coord_y
+	
+		if dis<threshold and np.abs(coord1[i*2]-coord2[i*2])<threshold and np.abs(coord1[i*2+1]-coord2[i*2+1])<threshold:
+			coord_x = (coord1[i*2]+coord2[i*2])/2
+			coord_y = (coord1[i*2+1]+coord2[i*2+1])/2
+			coord.append(int(coord_x))
+			coord.append(int(coord_y))
 		else:
-			coord[i*2] = coord1[i*2]
-			coord[i*2+1] = coord1[i*2+1]
+
+			coord.append(coord1[i*2])
+			coord.append(coord1[i*2+1])
 
 	return coord
 
@@ -234,30 +237,69 @@ def hough(image):
 		cv2.line(image,(x1,y1),(x2,y2),(255,0,0),2)
 	cv2.imshow("line:", image)
 
+def perspective(contours, image):
+
+	rect = cv2.minAreaRect(contours[0])
+	box = cv2.boxPoints(rect)
+	box = np.int0(box)
+
+	xs = np.min(box, axis=0)[0]
+	xe = np.max(box, axis=0)[0]
+	ys = np.min(box, axis=0)[1]
+	ye = np.max(box, axis=0)[1]
+
+	pts_dst = np.float32([[xs, ys], [xe, ys], [xe, ye], [xs, ye]])
+	pts_src = np.float32([[coord[0], coord[1]], [coord[4], coord[5]] ,[coord[2], coord[3]], [coord[6], coord[7]] ])
+
+	M = cv2.getPerspectiveTransform(pts_src, pts_dst)
+	warp = cv2.warpPerspective(image, M, (image.shape[1],image.shape[0]), cv2.INTER_LINEAR + cv2.WARP_INVERSE_MAP, cv2.BORDER_REPLICATE)
+
+	return warp
 
 if __name__ == '__main__':
-	file = "C:\\Users\\ER\Desktop\\test_code\\1_2400.jpg"
-	img = cv2.imread(file)
 
-	contours_new, ROI_src = affine(img)
+	file0 = "E:\\video_shot\\videos\\pics\\1_3000.jpg"
+	file1 = "E:\\video_shot\\videos\\pics\\1_2400.jpg"
+	file2 = "E:\\video_shot\\videos\\pics\\2_600.jpg"
+	file3 = "E:\\video_shot\\videos\\pics\\3_600.jpg"
+	file4 = "E:\\video_shot\\videos\\pics\\4_600.jpg"
+	file5 = "E:\\video_shot\\videos\\pics\\4_1200.jpg"
+	file6 = "E:\\video_shot\\videos\\pics\\5_600.jpg"
+	file7 = "E:\\video_shot\\videos\\pics\\6_600.jpg"
+	file8 = "E:\\video_shot\\videos\\pics\\6_1200.jpg"
+	file9 = "E:\\video_shot\\videos\\pics\\6_1800.jpg"
+	file10 = "E:\\video_shot\\videos\\pics\\6_2400.jpg"
+	file11 = "E:\\video_shot\\videos\\pics\\7_3600.jpg"
+	file12 = "E:\\video_shot\\videos\\pics\\7_4200.jpg"
 
+	img = cv2.imread(file0)
+
+	#contours = affine(img)
+	ROI_src = img.copy()
 	contours, idx = findCorner(img)
 	coord1, coord2 = findCoord(contours, idx)
 	coord = checkCoord(coord1, coord2)
 
-	print("coord1:", coord1)
-	print("coord2:",coord2)
+	warp = perspective(contours, ROI_src)
+	cv2.imshow("warp",warp)
+	cv2.imwrite("E:\\video_shot\\videos\\pics\\warp.jpg", warp)
+	
+	ROI_src = warp.copy()
+	contours, idx = findCorner(warp)
+	coord1, coord2 = findCoord(contours, idx)
+	coord = checkCoord(coord1, coord2)
+	print(coord)
+	for i in range(0, len(contours[0])):
+		cv2.circle(warp, (contours[0][i][0][0], contours[0][i][0][1]), 2, (0, 0, 255), -1)
+	for i in idx:
+		cv2.circle(warp, (contours[0][i][0][0], contours[0][i][0][1]), 4, (0, 255, 0), -1)
+	cv2.imshow("pointSRC", warp)
+
 	for i in range(4):
 		cv2.circle(ROI_src, (coord1[i*2], coord1[i*2+1]), 4, (0,255,0),-1)
 		cv2.circle(ROI_src, (coord2[i*2], coord2[i*2+1]), 4, (0,0,255),-1)
-		cv2.circle(img, (coord1[i*2], coord1[i*2+1]), 4, (0,255,0),-1)
-		cv2.circle(img, (coord2[i*2], coord2[i*2+1]), 4, (0,0,255),-1)
-		cv2.circle(ROI_src, (int(coord[i*2]), int(coord[i*2+1])), 6, (255, 0, 0), -1)
+		cv2.circle(ROI_src, (int(coord[i*2]), int(coord[i*2+1])), 6, (0, 255, 0), -1)
+	cv2.imshow("coordwarp", ROI_src)
+	cv2.imwrite("E:\\video_shot\\videos\\pics\\coord_warp.jpg", ROI_src)
 
-	cv2.imshow("coord", ROI_src)
-	cv2.imwrite("C:\\Users\\ER\Desktop\\test_code\\1_2400_coord.jpg", ROI_src)
-	cv2.imshow("coord_yuan", img)
-	cv2.imwrite("C:\\Users\\ER\Desktop\\test_code\\1_2400_coord1.jpg", img)
-	#hough(img)
 	cv2.waitKey(0)
-
