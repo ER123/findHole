@@ -17,12 +17,15 @@ namespace findCircle_vs2013
     {      
         static void Main(string[] args)
         {
-            string picsPath = "E:\\video_shot\\videos\\picsColor\\picsColor_.txt";
+            string picsPath = "C:\\Users\\ER\\Desktop\\test_code\\picsColor_.txt";
+            
+            string imgPath = "C:\\Users\\ER\\Desktop\\test_code\\1_600.jpg";
             StreamReader sr = new StreamReader(picsPath, Encoding.Default);
             string line;
             while ((line = sr.ReadLine()) != null)
             {
-                string imgPath = line.ToString();
+                //string imgPath = line.ToString();
+
                 Console.WriteLine(imgPath);
 
                 Mat image = CvInvoke.Imread(imgPath, LoadImageType.Color);
@@ -69,8 +72,9 @@ namespace findCircle_vs2013
 
             Point[][] con1 = contours.ToArrayOfArray();
             PointF[][] con2 = Array.ConvertAll<Point[], PointF[]>(con1, new Converter<Point[], PointF[]>(PointToPointF));
-
+            
             Mat contoursImage = new Mat(image, ROI);
+            int idx = 0;
             for (int i = 0; i < contours.Size; i++)
             {
                 Rectangle rect = new Rectangle();
@@ -79,30 +83,40 @@ namespace findCircle_vs2013
 
                 CircleF circle = CvInvoke.MinEnclosingCircle(con2[i]);
                 //CvInvoke.Circle(contoursImage, new Point((int)circle.Center.X, (int)circle.Center.Y), (int)circle.Radius, new MCvScalar(255, 0, 120), 1);
-
+                
                 if (isCircleCenter(circle) && isRectCenter(rect) && areaRect > 240000)
                 {
+                    idx += 1;
                     CvInvoke.DrawContours(contoursImage, contours, i, new MCvScalar(0, 0, 255), 1);
                     CvInvoke.Circle(contoursImage, new Point((int)circle.Center.X, (int)circle.Center.Y), 2, new MCvScalar(0, 0, 255), 2);
                     //CvInvoke.Circle(contoursImage, new Point((int)circle.Center.X, (int)circle.Center.Y), (int)circle.Radius, new MCvScalar(255, 0, 120), 1);
-                    CvInvoke.Rectangle(contoursImage, rect, new MCvScalar(255, 0, 0), 1);
-                    Emgu.CV.Util.VectorOfPoint v = findCutPoint(contours[i], rect);
+                    CvInvoke.Rectangle(contoursImage, rect, new MCvScalar(255, 0, 0), idx);
+                    Point[] v = findCutPoint(contours[i], rect);
+                    for (int k = 0; k < 4; k++)
+                    {
+                        Console.WriteLine(i);
+                        Console.WriteLine(v[k]);
+                        CvInvoke.Circle(contoursImage, v[k], 2, new MCvScalar(0, 255, 255), 2);
+                    }
                 }
             }
             CvInvoke.Imshow("contoursImage", contoursImage);
+            CvInvoke.Imwrite("C:\\Users\\ER\\Desktop\\test_code\\1_600_res.jpg", contoursImage);
 
             CvInvoke.WaitKey(0);            
             CvInvoke.DestroyAllWindows();
             image.Dispose();
         }
-        public static Emgu.CV.Util.VectorOfPoint findCutPoint(Emgu.CV.Util.VectorOfPoint contours, Rectangle rect)
+        public static Point[] findCutPoint(Emgu.CV.Util.VectorOfPoint contours, Rectangle rect)
         {
-            Emgu.CV.Util.VectorOfPoint res = new Emgu.CV.Util.VectorOfPoint();
             int max_X = 0;
             int max_Y = 0;
             int min_X = 800;
             int min_Y = 800;
-            int max_X_idx, max_Y_idx, min_X_idx, min_Y_idx;
+            int max_X_idx = 0;
+            int max_Y_idx = 0;
+            int min_X_idx = 0;
+            int min_Y_idx = 0;
             for (int i = 0; i < contours.Size; i++)
             {
                 if(contours[i].X > max_X)
@@ -115,20 +129,28 @@ namespace findCircle_vs2013
                     max_Y_idx = i;
                     max_Y = contours[i].Y;
                 }
-                if (contours[i].X > min_X)
+                if (contours[i].X < min_X)
                 {
                     min_X_idx = i;
                     min_X = contours[i].X;
                 }
-                if (contours[i].Y > min_Y)
+                if (contours[i].Y < min_Y)
                 {
                     min_Y_idx = i;
                     min_Y = contours[i].Y;
                 }
             }
-            System.Drawing.Point[] p0 = new Point(contours[min_Y].X, contours[min_Y].Y);
-            res.Push(p0);
+            System.Drawing.Point[] p0 = new Point[4];
+            p0[0].X = contours[min_Y_idx].X;
+            p0[0].Y = contours[min_Y_idx].Y;
+            p0[1].X = contours[max_X_idx].X;
+            p0[1].Y = contours[max_X_idx].Y;
+            p0[2].X = contours[max_Y_idx].X;
+            p0[2].Y = contours[max_Y_idx].Y;
+            p0[3].X = contours[min_X_idx].X;
+            p0[3].Y = contours[min_X_idx].Y;
 
+            return p0;
         }
         public static bool isCircleCenter(CircleF circle)
         {
