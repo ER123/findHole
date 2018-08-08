@@ -17,52 +17,77 @@ namespace findCircle_vs2013
     {      
         static void Main(string[] args)
         {
-            string picsPath = "C:\\Users\\ER\\Desktop\\test_code\\picsColor_.txt";
-            
-            string imgPath = "C:\\Users\\ER\\Desktop\\test_code\\1_600.jpg";
+            string picsPath = "E:\\video_shot\\videos\\picsColor\\picsColor.txt";
             StreamReader sr = new StreamReader(picsPath, Encoding.Default);
             string line;
+            int count = 0;
             while ((line = sr.ReadLine()) != null)
             {
-                //string imgPath = line.ToString();
-
+                string imgPath = line.ToString();
                 Console.WriteLine(imgPath);
 
                 Mat image = CvInvoke.Imread(imgPath, LoadImageType.Color);
-
-                findContours(image);
+                Mat imageDraw = new Mat();
+                image.CopyTo(imageDraw);
+                Point[] cutPoint = findContours(image);
+                if(cutPoint[0].X == 0)
+                {
+                    continue;
+                }
+                else
+                {
+                    for(int i =0;i < 4; i++)
+                    {
+                        Console.WriteLine(cutPoint[i].X);
+                        Console.WriteLine(cutPoint[i].Y);
+                        CvInvoke.Circle(imageDraw, new Point(cutPoint[i].X + 280, cutPoint[i].Y + 80), 2, new MCvScalar(0, 0, 255), 2);
+                    }
+                }
+                //findContours(image);
+                CvInvoke.Imshow("imageDraw", imageDraw);
+                CvInvoke.WaitKey(0);
+                count += 1;
             }
 
-            //Capture capture = new Capture("E:\\video_shot\\videos\\16_25_22.264");
+            ////Capture capture = new Capture("E:\\video_shot\\videos\\16_25_22.264");
             ////Capture capture = new Capture("E:\\video_shot\\videos\\16_35_19.264");
-            ////Capture capture = new Capture("E:\\video_shot\\videos\\16_35_24.264");
+            //Capture capture = new Capture("E:\\video_shot\\videos\\16_35_24.264");
             ////Capture capture = new Capture("E:\\video_shot\\videos\\16_45_19.264");
             //int idx = 0;
-            //while(true)
+            //while (true)
             //{
             //    Mat frame = capture.QueryFrame();
             //    idx += 1;
             //    if (frame != null)
             //    {
             //        Mat image = frame;
-            //        if (idx % 472 == 0)
+            //        if (idx % 24 == 0)
             //        {
             //            findContours(image);
             //        }
             //    }
             //}            
         }
-        public static void findContours(Mat image)
+        public static Point[] findContours(Mat image)
         {
+            Point[] ps = new Point[4];
+            for (int i =0;i < 4;i++)
+            {
+                ps[i].X = 0;
+                ps[i].Y = 0;
+            }
+            DateTime start = DateTime.Now;
+
             Mat grayImage = new Mat();
             CvInvoke.CvtColor(image, grayImage, Emgu.CV.CvEnum.ColorConversion.Bgr2Gray);
                         
             Rectangle ROI = new Rectangle(280, 80, 800, 800);
             Mat imageROI = new Mat(grayImage, ROI);
+            Mat imageROIBGR = new Mat(image, ROI);
 
             Mat cannyImage = new Mat();
             CvInvoke.Canny(imageROI, cannyImage, 100, 600);
-            CvInvoke.Imshow("cannyImage", cannyImage);
+            //CvInvoke.Imshow("cannyImage", cannyImage);
             
             //Mat edge = new Mat();
             //CvInvoke.Canny(threshImage, edge, 30, 200);
@@ -70,91 +95,142 @@ namespace findCircle_vs2013
             Emgu.CV.IOutputArray hierarchy = new Mat();
             CvInvoke.FindContours(cannyImage, contours, null, Emgu.CV.CvEnum.RetrType.List, Emgu.CV.CvEnum.ChainApproxMethod.ChainApproxSimple);
 
+            Rectangle rect = new Rectangle();
+            double areaRect = 0.0;
+            
+            CvInvoke.FindContours(cannyImage, contours, null, Emgu.CV.CvEnum.RetrType.List, Emgu.CV.CvEnum.ChainApproxMethod.ChainApproxSimple);
+
             Point[][] con1 = contours.ToArrayOfArray();
             PointF[][] con2 = Array.ConvertAll<Point[], PointF[]>(con1, new Converter<Point[], PointF[]>(PointToPointF));
-            
+
             Mat contoursImage = new Mat(image, ROI);
-            int idx = 0;
+            //int flag = 0;
+            //CvInvoke.Circle(contoursImage, new Point(390, 464), 30, new MCvScalar(0, 0, 255), 1);
+            //CvInvoke.Rectangle(contoursImage, new Rectangle(370,430,50,50), new MCvScalar(0, 0, 255), 1);
             for (int i = 0; i < contours.Size; i++)
             {
-                Rectangle rect = new Rectangle();
                 rect = CvInvoke.BoundingRectangle(contours[i]);
-                double areaRect = rect.Width * rect.Height;
+                areaRect = rect.Width * rect.Height;
 
                 CircleF circle = CvInvoke.MinEnclosingCircle(con2[i]);
                 //CvInvoke.Circle(contoursImage, new Point((int)circle.Center.X, (int)circle.Center.Y), (int)circle.Radius, new MCvScalar(255, 0, 120), 1);
-                
-                if (isCircleCenter(circle) && isRectCenter(rect) && areaRect > 240000)
+
+                if (isCircleCenter(circle) && isRectCenter(rect) && areaRect > 300000)// && flag == 0)
                 {
-                    idx += 1;
-                    CvInvoke.DrawContours(contoursImage, contours, i, new MCvScalar(0, 0, 255), 1);
-                    CvInvoke.Circle(contoursImage, new Point((int)circle.Center.X, (int)circle.Center.Y), 2, new MCvScalar(0, 0, 255), 2);
+                    //flag = 1;
+                    //CvInvoke.DrawContours(contoursImage, contours, i, new MCvScalar(0, 0, 255), 1);
+                    //CvInvoke.Circle(contoursImage, new Point((int)circle.Center.X, (int)circle.Center.Y), 2, new MCvScalar(0, 0, 255), 2);
                     //CvInvoke.Circle(contoursImage, new Point((int)circle.Center.X, (int)circle.Center.Y), (int)circle.Radius, new MCvScalar(255, 0, 120), 1);
-                    CvInvoke.Rectangle(contoursImage, rect, new MCvScalar(255, 0, 0), idx);
-                    Point[] v = findCutPoint(contours[i], rect);
-                    for (int k = 0; k < 4; k++)
-                    {
-                        Console.WriteLine(i);
-                        Console.WriteLine(v[k]);
-                        CvInvoke.Circle(contoursImage, v[k], 2, new MCvScalar(0, 255, 255), 2);
-                    }
+                    //CvInvoke.Rectangle(contoursImage, rect, new MCvScalar(255, 0, 0), 1);
+                    ps = findCutPoint(contours[i]);
+                    //for (int k = 0; k < 4; k++)
+                    //{
+                    //    CvInvoke.Circle(contoursImage, ps[k], 2, new MCvScalar(0, 255, 255), 2);
+                    //}
                 }
             }
-            CvInvoke.Imshow("contoursImage", contoursImage);
-            CvInvoke.Imwrite("C:\\Users\\ER\\Desktop\\test_code\\1_600_res.jpg", contoursImage);
+            DateTime end = DateTime.Now;
+            TimeSpan ts = end.Subtract(start);
+            Console.WriteLine("DateTime {0}ms.", ts.TotalMilliseconds);
 
-            CvInvoke.WaitKey(0);            
-            CvInvoke.DestroyAllWindows();
+            //CvInvoke.Imshow("contoursImage", contoursImage);
+            //CvInvoke.WaitKey(0);            
+            //CvInvoke.DestroyAllWindows();
             image.Dispose();
-        }
-        public static Point[] findCutPoint(Emgu.CV.Util.VectorOfPoint contours, Rectangle rect)
-        {
-            int max_X = 0;
-            int max_Y = 0;
-            int min_X = 800;
-            int min_Y = 800;
-            int max_X_idx = 0;
-            int max_Y_idx = 0;
-            int min_X_idx = 0;
-            int min_Y_idx = 0;
-            for (int i = 0; i < contours.Size; i++)
-            {
-                if(contours[i].X > max_X)
-                {
-                    max_X_idx = i;
-                    max_X = contours[i].X;
-                }
-                if(contours[i].Y > max_Y)
-                {
-                    max_Y_idx = i;
-                    max_Y = contours[i].Y;
-                }
-                if (contours[i].X < min_X)
-                {
-                    min_X_idx = i;
-                    min_X = contours[i].X;
-                }
-                if (contours[i].Y < min_Y)
-                {
-                    min_Y_idx = i;
-                    min_Y = contours[i].Y;
-                }
-            }
-            System.Drawing.Point[] p0 = new Point[4];
-            p0[0].X = contours[min_Y_idx].X;
-            p0[0].Y = contours[min_Y_idx].Y;
-            p0[1].X = contours[max_X_idx].X;
-            p0[1].Y = contours[max_X_idx].Y;
-            p0[2].X = contours[max_Y_idx].X;
-            p0[2].Y = contours[max_Y_idx].Y;
-            p0[3].X = contours[min_X_idx].X;
-            p0[3].Y = contours[min_X_idx].Y;
 
-            return p0;
+            return ps;
+        }
+        public static Point[] findCutPoint(Emgu.CV.Util.VectorOfPoint contours)
+        {
+            Point[] con1 = contours.ToArray();
+            Array.Sort(con1, compareY);
+
+            int size = con1.Length;
+            int top_x = con1[0].X;
+            int top_y = con1[0].Y;
+            int bottom_x = con1[size - 1].X;
+            int bottom_y = con1[size - 1].Y;
+            int top_x_count = 1;
+            int bottom_x_count = 1;
+            int flag1 = 0;
+            for (int i = 1; i<size/10; i++)
+            {
+                if (top_y == con1[i].Y)
+                {
+                    flag1 = 1;
+                    top_x_count += 1;
+                    top_x += con1[i].X;
+                }
+                if(bottom_y == con1[size -1 - i].Y)
+                {
+                    flag1 = 1;
+                    bottom_x_count += 1;
+                    bottom_x += con1[size - 1 - i].X;
+                }
+                if (flag1 == 0)
+                    break;
+            }
+            float top_x_temp = (float)(top_x * 1.0F / top_x_count * 1.0);
+            float bottom_x_temp = (float)(bottom_x * 1.0F / bottom_x_count * 1.0);
+            
+            Point[] con2 = con1;
+            Array.Sort(con2, compareX);
+            int left_x = con2[0].X;
+            int left_y = con2[0].Y;
+            int right_x = con2[size - 1].X;
+            int right_y = con2[size - 1].Y;
+            int left_y_count = 1;
+            int right_y_count = 1;
+            int flag2 = 0;
+            for (int i = 1; i < size / 10; i++)
+            {
+                if (left_x == con2[i].X)
+                {
+                    flag2 = 1;
+                    left_y_count += 1;
+                    left_y += con2[i].Y;
+                }
+                if (right_x == con2[size - 1 - i].X)
+                {
+                    flag2 = 1;
+                    right_y_count += 1;
+                    right_y += con2[size - 1 - i].Y;
+                }
+                if(flag2 == 0)
+                    break;
+            }
+            float left_y_temp = left_y*1.0F / (float)(left_y_count*1.0F);
+            float right_y_temp = right_y*1.0F / (float)right_y_count*1.0F;
+
+            System.Drawing.Point[] p1 = new Point[4];
+            p1[0].X = (int)top_x_temp;
+            p1[0].Y = top_y;
+            p1[1].X = right_x;
+            p1[1].Y = (int)right_y_temp;
+            p1[2].X = (int)bottom_x_temp;
+            p1[2].Y = bottom_y;
+            p1[3].X = left_x;
+            p1[3].Y = (int)left_y_temp;
+            
+            return p1;
+        }
+        public static int compareX(Point a, Point b)
+        {
+            if (a.X >= b.X)
+                return 1;
+            else
+                return -1;
+        }
+        public static int compareY(Point a, Point b)
+        {
+            if (a.Y >= b.Y)
+                return 1;
+            else
+                return -1;
         }
         public static bool isCircleCenter(CircleF circle)
         {
-            if (circle.Center.X > 350 && circle.Center.X < 410 && circle.Center.Y > 400 && circle.Center.Y < 485)
+            if (circle.Center.X > 360 && circle.Center.X < 420 && circle.Center.Y > 434 && circle.Center.Y < 494)
                 return true;
             else 
                 return false;
@@ -168,126 +244,16 @@ namespace findCircle_vs2013
             else
                 return false;
         }
-        public static PointF[] PointToPointF(Point[] pf)
+        public static PointF[] PointToPointF(Point[] ppf)
         {
-            PointF[] aaa = new PointF[pf.Length];
+            PointF[] pf = new PointF[ppf.Length];
             int num = 0;
-            foreach (var point in pf)
+            foreach (var point in ppf)
             {
-                aaa[num].X = (int)point.X;
-                aaa[num++].Y = (int)point.Y;
+                pf[num].X = (int)point.X;
+                pf[num++].Y = (int)point.Y;
             }
-            return aaa;
-        }
-
-        public static void nouse(Mat image)
-        {
-            //Emgu.CV.Util.VectorOfMat splitImage = new Emgu.CV.Util.VectorOfMat();
-            //CvInvoke.Split(image, splitImage);
-            //var vms = splitImage.GetOutputArray();
-            //Mat res0 = vms.GetMat(0);
-            //Mat res1 = vms.GetMat(1);
-            //Mat res2 = vms.GetMat(2);
-            //CvInvoke.Imshow("res0", res0);
-            //CvInvoke.Imshow("res1", res1);
-            //CvInvoke.Imshow("res2", res2);
-
-            //Emgu.CV.CvInvoke.Rectangle(image, ROI, new Emgu.CV.Structure.MCvScalar(0, 255, 0), 3);
-            //CvInvoke.Imshow("ROI", imageROI);
-
-            //Mat grayImage = new Mat();
-            //CvInvoke.CvtColor(imageROI, grayImage, Emgu.CV.CvEnum.ColorConversion.Bgr2Gray);
-            //CvInvoke.Imshow("grayImage", grayImage);
-
-            //Mat blurImage = new Mat();
-            //Mat GaussianImage = new Mat();
-            //CvInvoke.Blur(grayImage, blurImage, new Size(3, 3), new Point(-1, 1));
-            ////CvInvoke.Imshow("blurImage", blurImage);
-            //CvInvoke.GaussianBlur(grayImage, GaussianImage, new Size(3, 3), 3);
-            ////CvInvoke.Imshow("GaussianBlur", GaussianImage);
-            //Mat threshImage = new Mat();
-            //CvInvoke.Threshold(grayImage, threshImage, 100, 255, ThresholdType.Binary);
-            ////CvInvoke.Imshow("threshImage", threshImage);
-            //Mat struct_element = CvInvoke.GetStructuringElement(ElementShape.Rectangle, new Size(5, 5), new Point(-1, -1));
-            //Mat daliteImage = new Mat();
-            //CvInvoke.Dilate(threshImage, daliteImage, struct_element, new Point(-1, -1), 1, BorderType.Default, new MCvScalar(0, 0, 0));
-            ////CvInvoke.Imshow("Dilate", daliteImage);
-            //Mat openImage = new Mat();
-            //CvInvoke.MorphologyEx(threshImage, openImage, MorphOp.Open, struct_element, new Point(-1, -1), 1, BorderType.Default, new MCvScalar(0, 0, 0));
-            ////CvInvoke.Imshow("close", openImage);
-            Mat grayImage = new Mat();
-            CvInvoke.CvtColor(image, grayImage, Emgu.CV.CvEnum.ColorConversion.Bgr2Gray);
-            Emgu.CV.Util.VectorOfMat splitImage = new Emgu.CV.Util.VectorOfMat();
-            CvInvoke.Split(image, splitImage);
-            //CvInvoke.Imshow("B", splitImage[0]);
-            //CvInvoke.Imshow("G", splitImage[1]);
-            //CvInvoke.Imshow("R", splitImage[2]);
-            var vms = splitImage.GetOutputArray();
-            Mat res0 = vms.GetMat(0);
-            Mat res1 = vms.GetMat(1);
-            Mat res2 = vms.GetMat(2);
-            CvInvoke.Imshow("res0", res0);
-            CvInvoke.Imshow("res1", res1);
-            CvInvoke.Imshow("res2", res2);
-            Console.WriteLine(res2.Size);
-
-            Rectangle ROI = new Rectangle(280, 80, 800, 800);
-            Mat imageROI = new Mat(image, ROI);
-            Console.WriteLine(imageROI.NumberOfChannels);
-
-
-            Mat cannyImage = new Mat();
-            CvInvoke.Canny(grayImage, cannyImage, 100, 600);
-            CvInvoke.Imshow("cannyImage", cannyImage);
-
-            //Mat threshImage = new Mat();
-            //CvInvoke.Threshold(cannyImage, threshImage, 160, 255, ThresholdType.Binary);
-
-            Mat edge = new Mat();
-            Emgu.CV.Util.VectorOfVectorOfPoint contours = new Emgu.CV.Util.VectorOfVectorOfPoint();
-            Emgu.CV.IOutputArray hierarchy = new Mat();
-            CvInvoke.FindContours(cannyImage, contours, null, Emgu.CV.CvEnum.RetrType.List, Emgu.CV.CvEnum.ChainApproxMethod.ChainApproxSimple);
-
-            Mat contoursImage = new Mat(image, ROI);
-            //double max_area = 0;
-            //int max_idx = 0;
-
-            Point[][] con1 = contours.ToArrayOfArray();
-            PointF[][] con2 = Array.ConvertAll<Point[], PointF[]>(con1, new Converter<Point[], PointF[]>(PointToPointF));
-
-            for (int i = 0; i < contours.Size; i++)
-            {
-                Rectangle rect = new Rectangle();
-                double area = CvInvoke.ContourArea(contours[i]);
-                rect = CvInvoke.BoundingRectangle(contours[i]);
-                double areaRect = rect.Height * rect.Width;
-                if (areaRect < 2500)
-                {
-                    CvInvoke.Rectangle(contoursImage, rect, new MCvScalar(170, 205, 120), -1);
-                }
-                //if (area > 0 && area < 40000)
-                //{
-                //rect = CvInvoke.BoundingRectangle(contours[i]);
-                //CvInvoke.Rectangle(contoursImage, rect, new MCvScalar(0, 255, 255), 1);
-
-                //CircleF circle = CvInvoke.MinEnclosingCircle(con2[i]);
-                //CvInvoke.Circle(contoursImage, new Point((int)circle.Center.X, (int)circle.Center.Y), (int)circle.Radius, new MCvScalar(255, 0, 120), 1);
-
-                //CvInvoke.DrawContours(contoursImage, contours, i, new MCvScalar(0, 0, 0), 1);
-                //}
-                //CvInvoke.DrawContours(contoursImage, contours, i, new MCvScalar(255, 0, 255), 1);
-
-                //if (area > max_area)
-                //{
-                //    max_area = area;
-                //    max_idx = i;
-                //}
-
-            }
-            //double areaMax = CvInvoke.ContourArea(contours[max_idx]);
-            //Console.WriteLine(areaMax);
-            //CvInvoke.DrawContours(contoursImage, contours, max_idx, new MCvScalar(0, 0, 255), 2);
-
+            return pf;
         }
     }
 }
